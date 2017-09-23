@@ -23,7 +23,7 @@ from sample_players import (RandomPlayer, open_move_score,
 from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
-NUM_MATCHES = 1 #5  # number of matches against each opponent
+NUM_MATCHES = 5 #5  # number of matches against each opponent
 TIME_LIMIT = 150  # number of milliseconds before timeout
 
 DESCRIPTION = """
@@ -84,13 +84,13 @@ def play_matches(cpu_agents, test_agents, num_matches):
     total_matches = 2 * num_matches * len(cpu_agents)
 
     print("\n{:^9}{:^13}".format("Match #", "Opponent") + ''.join(['{:^13}'.format(x[1].name) for x in enumerate(test_agents)]))
-    print("{:^9}{:^13} ".format("", "") +  ' '.join(['{:^5}| {:^5}'.format("Won", "Lost") for x in enumerate(test_agents)]))
+    print("{:^9}{:^13}".format("", "") +  ' '.join(['{:^5}| {:^5}'.format("Won", "Lost") for x in enumerate(test_agents)]))
 
     for idx, agent in enumerate(cpu_agents):
         wins = {key: 0 for (key, value) in test_agents}
         wins[agent.player] = 0
-
         print "{!s:^9}{:^13}".format(idx + 1, agent.name),
+        #print "{!s:^9}{:^13}".format(idx + 1, agent.name),
         #, end="", flush=True)
 
         counts = play_round(agent, test_agents, wins, num_matches)
@@ -134,9 +134,9 @@ def main():
         Agent(AlphaBetaPlayer(score_fn=custom_score_2), "AB_Custom_2"),
         Agent(AlphaBetaPlayer(score_fn=custom_score_3), "AB_Custom_3")
     ]
-   #test_agents = [
-   #     Agent(AlphaBetaPlayer(score_fn=custom_score), "AB_Custom")
-   # ]
+    test_agents = [
+        Agent(AlphaBetaPlayer(score_fn=custom_score), "AB_Custom")
+    ]
  
 
     # Define a collection of agents to compete against the test agents
@@ -150,9 +150,9 @@ def main():
         Agent(AlphaBetaPlayer(score_fn=improved_score), "AB_Improved")
     ]
 
-   #cpu_agents = [
-   #    Agent(RandomPlayer(), "Random")
-   #  ]
+    cpu_agents = [
+       Agent(MinimaxPlayer(score_fn=open_move_score), "MM_Open")
+     ]
 
 
     print(DESCRIPTION)

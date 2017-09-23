@@ -337,6 +337,6 @@ class Board(object):
                 return self._inactive_player, move_history, "illegal move"
 
             move_history.append(list(curr_move))
-
+            #print curr_move
             self.apply_move(curr_move)
         print move_history       

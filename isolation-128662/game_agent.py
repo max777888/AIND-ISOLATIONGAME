@@ -198,14 +198,14 @@ class MinimaxPlayer(IsolationPlayer):
         try:
             # The try/except block will automatically catch the exception
             # raised when the timer is about to expire.
-            best_move= self.minimax(game, self.search_depth)
+            return self.minimax(game, self.search_depth)
         except SearchTimeout:
             raise SearchTimeout()
 
         # Return the best move from the last completed search iteration
         return best_move
 
-    def minimax(self, game, depth,maximizing_player=True ):
+    def minimax(self, game, depth , maximizing_player=True):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
 
@@ -246,36 +246,62 @@ class MinimaxPlayer(IsolationPlayer):
         """
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
-      
+
+        # Are there any legal moves left for us to play? If not, then we lost!
+        # The maximizing (minimizing) player returns the lowest (highest) possible score.
         best_move = (-1, -1)
-        # Get all moves available
-        available_moves = game.get_legal_moves()
-        # return if no more legal moves available or current depth =0
-        if depth == 0:
-          # return (best_move)
-          return available_moves[0]
-        if available_moves == 0:
-            return (self.score(game, self), best_move)
-            #return (best_move)
-        if not available_moves:
-            return (self.score(game, self), best_move)
-            #return (best_move)
-        if game.active_player == self:
-            max_score = float("-inf") 
-            for move in available_moves:
-                child_score, move_child = self.minimax(game.forecast_move(move), depth - 1)
-                if child_score > max_score:
-                    max_score = child_score
-                    best_move =  move
-        else:
-            min_score = float("inf")  
-            for move in available_moves:
-                child_score, move_child = self.minimax(game.forecast_move(move), depth - 1)
-                if child_score < min_score:
-                    min_score = child_score
-                    best_move = move
-        return (best_move)
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            if maximizing_player == True:
+                return float("-inf"), (-1, -1)
+            else:
+                return float("inf"), (-1, -1)
+        #if depth == 0:
+        #  return best_move
+
+        lowest_score = float("inf")
+        highest_score = float("-inf")
+        if depth == 1:
+          if maximizing_player == True:
+            for move in legal_moves:
+            # Evaluate this move.
+              score = self.score(game.forecast_move(move), self)
+              if score == float("inf"):
+                return score, move
+              if score > highest_score_so_far:
+                highest_score=score
+                best_move = move
+                return best_move
+              else:
+                for move in legal_moves:
+                    score = self.score(game.forecast_move(move), self)
+                    if score == float("-inf"):
+                        return score, move
+                    if score < lowest_score:
+                        lowest_score = score
+                        best_move = move
+                return best_move
         
+        if maximizing_player == True:
+            for move in legal_moves:
+                score = self.minimax(game.forecast_move(move), depth-1, maximizing_player = False)
+                if score == float("inf"):
+                    return score, move
+                if score > highest_score:
+                    highest_score = score
+                    best_move =  move
+            return highest_score , best_move
+        else:
+            for move in legal_moves:
+               score = self.minimax(game.forecast_move(move), depth-1, maximizing_player=True)
+               if score == float("-inf"):
+                 return score, move
+               if score < lowest_score:
+                 lowest_score = score
+                 best_move =  move
+            return lowest_score, best_move
+
+
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
     search with alpha-beta pruning. You must finish and test this player to
@@ -319,10 +345,11 @@ class AlphaBetaPlayer(IsolationPlayer):
         move = (-1, -1)
         for i in range(1, 10000):
             try:
-                score, move = self.alphabeta(game, i)
+                move = self.alphabeta(game, i)
             except SearchTimeout:
                 break
-       
+        #print "my move" 
+        #print move
         return move
 
 
@@ -376,60 +403,61 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         # TODO: finish this function!
         legal_moves = game.get_legal_moves()
-        available_moves = game.get_legal_moves()
-
-        # Recursion Stopping Conditions
-        # Terminal/Leaf Node --> No more legal moves available OR
-        # Fixed depth search --> Current depth level exceed specified max depth.
-        if (not available_moves) or (depth == 0):
-            if maximizing_player:
-                return (self.score(game, game.active_player), (-1, -1))
+        if not legal_moves:
+            if maximizing_player == True:
+                return float("-inf"), (-1, -1)
             else:
-                return (self.score(game, game.inactive_player), (-1, -1))
+                return float("inf"), (-1, -1)
 
-        current_move = available_moves[0]
-        if maximizing_player:
-            current_score = float("-inf")
-            for move in available_moves:
-                game_child = game.forecast_move(move)
-                child_score, child_move = self.alphabeta(game_child, depth-1,
-                                                           alpha, beta,
-                                                           False)
-
-                if child_score >= current_score:
-                    current_score = child_score
-
-                # Test if the branch utility is greater than beta,
-                # then prune other sibling branches.
-                if current_score >= beta:
-                    return current_score, move
-
-                # Update alpha if branch utility is greater than
-                # current value of alpha for MAX nodes.
-                if current_score > alpha:
-                    current_move = move
-                    alpha = current_score
-
+        lowest_score = float("inf")
+        highest_score =  float("-inf")
+        best_move = (-1, -1)
+        if depth == 1:
+            if maximizing_player == True:
+                for move in legal_moves:
+                    # Evaluate this move.
+                    score = self.score(game.forecast_move(move), self)
+                    # If this is a score better than beta, no need to search further. Otherwise, remember the best move.
+                    if score >= beta:
+                        return score, move
+                    if score > highest_score:
+                        highest_score, best_move = score, move
+                #return highest_score, best_move
+                return  best_move
+            else:
+                for move in legal_moves:
+                    # Evaluate this move.
+                    score = self.score(game.forecast_move(move), self)
+                    # If this is a score worse than alpha, no need to search further. Otherwise, remember the best move.
+                    if score <= alpha:
+                        return score, move
+                    if score < lowest_score:
+                        lowest_score, best_move = score, move
+                #return lowest_score, best_move
+                return best_move  
+        if maximizing_player == True:
+            for move in legal_moves:
+                # Evaluate this move in depth.
+                score, _ = self.alphabeta(game.forecast_move(move), depth-1, alpha, beta, maximizing_player = False)
+                # If this branch yields a score better than beta, no need to search further.
+                if score >= beta:
+                    return score, move
+                # Otherwise, remember the best move and update alpha.
+                if score > highest_score:
+                    highest_score , best_move = score, move
+                alpha = max(alpha, highest_score)
+            #return highest_score , best_move
+            return best_move
         else:
-            current_score = float("inf")
-            for move in available_moves:
-                game_child = game.forecast_move(move)
-                child_score, child_move = self.alphabeta(game_child, depth-1,
-                                                           alpha, beta,
-                                                           True)
-
-                if child_score <= current_score:
-                    current_score = child_score
-
-                # Test if the branch utility is less than alpha,
-                # then prune other sibling branches.
-                if current_score <= alpha:
-                    return current_score, move
-
-                # Update beta if branch utility is lesser than
-                # current value of beta for MIN nodes.
-                if current_score < beta:
-                    current_move = move
-                    beta = current_score
-
-        return current_score, current_move
+            for move in legal_moves:
+                # Evaluate this move in depth.
+                score, _ = self.alphabeta(game.forecast_move(move), depth-1, alpha, beta, maximizing_player=True)
+                # If this branch yields a score worse than alpha, no need to search further.
+                if score <= alpha:
+                    return score, move
+                # Otherwise, remember the best move and update beta.
+                if score < lowest_score:
+                    lowest_score, best_move = score, move
+                beta = min(beta, lowest_score)
+        #return lowest_score, best_move
+        return best_move
