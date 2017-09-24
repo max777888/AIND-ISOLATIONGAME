@@ -85,7 +85,7 @@ def custom_score_2(game, player):
     # We have moves to play. How many more than our opponent?
     player_moves_left = len(game.get_legal_moves(player))
     opponent_moves_left = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(player_moves_left)
+    return float(player_moves_left - opponent_moves_left)
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -122,9 +122,8 @@ def custom_score_3(game, player):
     # We have moves to play. How many more than our opponent?
     player_moves_left = len(game.get_legal_moves(player))
     opponent_moves_left = len(game.get_legal_moves(game.get_opponent(player)))
-    if (opponent_moves_left==0):
-      return float(player_moves_left)
-    return float(player_moves_left/opponent_moves_left)
+    return float(player_moves_left - opponent_moves_left)
+
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -193,6 +192,20 @@ class MinimaxPlayer(IsolationPlayer):
 
         # Initialize the best move so that this function returns something
         # in case the search fails due to timeout
+        legal_moves =game.get_legal_moves()
+        if len(legal_moves) == 0:
+          return (-1, -1)
+        elif len(legal_moves) == 1:
+          return legal_moves[0]
+
+        if game.move_count == game.get_legal_moves():
+            return game.get_legal_moves()[0]
+        h, w = game.height, game.width
+        # Opening Book Rules
+        # First move of first player (current player)
+        if game.move_count == 0:
+            return ((h-1)//2, (w-1)//2)
+    
         best_move = (-1, -1)
 
         try:
@@ -247,35 +260,34 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
       
-        best_move = (-1, -1)
-        # Get all moves available
         available_moves = game.get_legal_moves()
-        # return if no more legal moves available or current depth =0
-        if depth == 0:
-          # return (best_move)
-          return available_moves[0]
-        if available_moves == 0:
-            return (self.score(game, self), best_move)
-            #return (best_move)
-        if not available_moves:
-            return (self.score(game, self), best_move)
-            #return (best_move)
-        if game.active_player == self:
-            max_score = float("-inf") 
+ 
+        if (not available_moves) :
+          return (self.score(game, game.active_player), (-1, -1))
+       
+        if (depth==0):
+          return (self.score(game, game.active_player), available_moves[0])
+
+        current_move = available_moves[0]
+        if maximizing_player:
+            current_score = float("-inf")
             for move in available_moves:
-                child_score, move_child = self.minimax(game.forecast_move(move), depth - 1)
-                if child_score > max_score:
-                    max_score = child_score
-                    best_move =  move
+                game_forecast = game.forecast_move(move)
+                child_score, child_move = self.minimax(game_forecast, depth-1, False)
+                if child_score > current_score:
+                    current_move = move
+                    current_score = child_score
+
         else:
-            min_score = float("inf")  
+            current_score = float("inf")
             for move in available_moves:
-                child_score, move_child = self.minimax(game.forecast_move(move), depth - 1)
-                if child_score < min_score:
-                    min_score = child_score
-                    best_move = move
-        return (best_move)
-        
+                game_forecast = game.forecast_move(move)
+                child_score, child_move = self.minimax(game_forecast, depth-1,True)
+                if child_score < current_score:
+                    current_move = move
+                    current_score = child_score
+
+        return current_move
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
     search with alpha-beta pruning. You must finish and test this player to
@@ -313,13 +325,26 @@ class AlphaBetaPlayer(IsolationPlayer):
             (-1, -1) if there are no available legal moves.
         """
         self.time_left = time_left
+        legal_moves =game.get_legal_moves()
+        if len(legal_moves) == 0:
+          return (-1, -1)
+        elif len(legal_moves) == 1:
+          return legal_moves[0]
+
+        if game.move_count == game.get_legal_moves():
+            return game.get_legal_moves()[0]
+        h, w = game.height, game.width
+        # Opening Book Rules
+        # First move of first player (current player)
+        if game.move_count == 0:
+            return ((h-1)//2, (w-1)//2)
 
         # TODO: finish this function!
         # raise NotImplementedError
         move = (-1, -1)
         for i in range(1, 10000):
             try:
-                score, move = self.alphabeta(game, i)
+                move = self.alphabeta(game, i)
             except SearchTimeout:
                 break
        
@@ -375,7 +400,7 @@ class AlphaBetaPlayer(IsolationPlayer):
             raise SearchTimeout()
 
         # TODO: finish this function!
-        legal_moves = game.get_legal_moves()
+        #legal_moves = game.get_legal_moves()
         available_moves = game.get_legal_moves()
 
         # Recursion Stopping Conditions
@@ -391,10 +416,8 @@ class AlphaBetaPlayer(IsolationPlayer):
         if maximizing_player:
             current_score = float("-inf")
             for move in available_moves:
-                game_child = game.forecast_move(move)
-                child_score, child_move = self.alphabeta(game_child, depth-1,
-                                                           alpha, beta,
-                                                           False)
+                game_forecast = game.forecast_move(move)
+                child_score, child_move = self.alphabeta(game_forecast, depth-1,alpha, beta,False)
 
                 if child_score >= current_score:
                     current_score = child_score
@@ -413,8 +436,8 @@ class AlphaBetaPlayer(IsolationPlayer):
         else:
             current_score = float("inf")
             for move in available_moves:
-                game_child = game.forecast_move(move)
-                child_score, child_move = self.alphabeta(game_child, depth-1,
+                game_forecast = game.forecast_move(move)
+                child_score, child_move = self.alphabeta(game_forecast, depth-1,
                                                            alpha, beta,
                                                            True)
 
@@ -432,4 +455,4 @@ class AlphaBetaPlayer(IsolationPlayer):
                     current_move = move
                     beta = current_score
 
-        return current_score, current_move
+        return current_move
