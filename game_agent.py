@@ -3,7 +3,7 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
-
+import math
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
@@ -85,7 +85,7 @@ def custom_score_2(game, player):
     # We have moves to play. How many more than our opponent?
     player_moves_left = len(game.get_legal_moves(player))
     opponent_moves_left = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(player_moves_left - opponent_moves_left)
+    return float(player_moves_left)
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -120,10 +120,25 @@ def custom_score_3(game, player):
         return float("-inf")
 
     # We have moves to play. How many more than our opponent?
-    player_moves_left = len(game.get_legal_moves(player))
-    opponent_moves_left = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(player_moves_left - opponent_moves_left)
+    center_col= math.ceil(game.width/2.)
+    center_row= math.ceil(game.height/2.)
 
+    player_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
+    player_moves_left= len(player_moves)
+    opponent_moves_left= len(opponent_moves)
+    player_weight=1
+    opponent_weight=1
+
+    for move in player_moves:
+      if move[0]== center_row or move[1]== center_col:
+        player_weight += 1
+
+    for move in opponent_moves:
+      if move[0]== center_row or move[1]== center_col:
+        opponent_weight +=1
+
+    return float((opponent_moves_left * opponent_weight))
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -200,9 +215,8 @@ class MinimaxPlayer(IsolationPlayer):
 
         if game.move_count == game.get_legal_moves():
             return game.get_legal_moves()[0]
+
         h, w = game.height, game.width
-        # Opening Book Rules
-        # First move of first player (current player)
         if game.move_count == 0:
             return ((h-1)//2, (w-1)//2)
     
@@ -259,15 +273,17 @@ class MinimaxPlayer(IsolationPlayer):
         """
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
-      
+        current_move=(-1,-1)
+
         available_moves = game.get_legal_moves()
- 
+      
         if (not available_moves) :
           return (self.score(game, game.active_player), (-1, -1))
        
         if (depth==0):
           return (self.score(game, game.active_player), available_moves[0])
-
+       
+        
         current_move = available_moves[0]
         if maximizing_player:
             current_score = float("-inf")
@@ -334,8 +350,6 @@ class AlphaBetaPlayer(IsolationPlayer):
         if game.move_count == game.get_legal_moves():
             return game.get_legal_moves()[0]
         h, w = game.height, game.width
-        # Opening Book Rules
-        # First move of first player (current player)
         if game.move_count == 0:
             return ((h-1)//2, (w-1)//2)
 
@@ -344,7 +358,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         move = (-1, -1)
         for i in range(1, 10000):
             try:
-                move = self.alphabeta(game, i)
+                score,move = self.alphabeta(game, i)
             except SearchTimeout:
                 break
        
@@ -403,9 +417,6 @@ class AlphaBetaPlayer(IsolationPlayer):
         #legal_moves = game.get_legal_moves()
         available_moves = game.get_legal_moves()
 
-        # Recursion Stopping Conditions
-        # Terminal/Leaf Node --> No more legal moves available OR
-        # Fixed depth search --> Current depth level exceed specified max depth.
         if (not available_moves) or (depth == 0):
             if maximizing_player:
                 return (self.score(game, game.active_player), (-1, -1))
@@ -422,13 +433,9 @@ class AlphaBetaPlayer(IsolationPlayer):
                 if child_score >= current_score:
                     current_score = child_score
 
-                # Test if the branch utility is greater than beta,
-                # then prune other sibling branches.
                 if current_score >= beta:
                     return current_score, move
 
-                # Update alpha if branch utility is greater than
-                # current value of alpha for MAX nodes.
                 if current_score > alpha:
                     current_move = move
                     alpha = current_score
@@ -444,15 +451,11 @@ class AlphaBetaPlayer(IsolationPlayer):
                 if child_score <= current_score:
                     current_score = child_score
 
-                # Test if the branch utility is less than alpha,
-                # then prune other sibling branches.
                 if current_score <= alpha:
                     return current_score, move
 
-                # Update beta if branch utility is lesser than
-                # current value of beta for MIN nodes.
                 if current_score < beta:
                     current_move = move
                     beta = current_score
 
-        return current_move
+        return current_score,current_move
